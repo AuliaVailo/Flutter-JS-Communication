@@ -1,24 +1,25 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_js_communication/controller/home_controller.dart';
 import 'package:get/get.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+
+import '../../controller/home_controller.dart';
 
 class HomePage extends GetView<HomeController> {
   const HomePage({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final Completer<WebViewController> _controller =
-        Completer<WebViewController>();
-    late WebViewController _webViewController;
-
     return GetX<HomeController>(
       initState: (state) {
         if (Platform.isAndroid) WebView.platform = SurfaceAndroidWebView();
+        Get.find<HomeController>().initBannerAd();
+      },
+      dispose: (state) {
+        Get.find<HomeController>().bannerAd.dispose();
       },
       builder: (_) => Scaffold(
         appBar: AppBar(
@@ -30,8 +31,8 @@ class HomePage extends GetView<HomeController> {
               initialUrl: 'https://js-flutter-communication.herokuapp.com',
               javascriptMode: JavascriptMode.unrestricted,
               onWebViewCreated: (WebViewController webViewController) {
-                _controller.complete(webViewController);
-                _webViewController = webViewController;
+                _.controller.complete(webViewController);
+                _.webViewController = webViewController;
               },
               onProgress: (int progress) {
                 _.isLoading(true);
@@ -66,16 +67,40 @@ class HomePage extends GetView<HomeController> {
                     ),
                   )
                 : const SizedBox.shrink(),
+            _.isBannerAdReady.value
+                ? Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      width: _.bannerAd.size.width.toDouble(),
+                      height: _.bannerAd.size.height.toDouble(),
+                      child: AdWidget(
+                        ad: _.bannerAd,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+            Positioned(
+              bottom: 60.0,
+              right: 10.0,
+              child: GestureDetector(
+                onTap: () {
+                  _.webViewController.runJavascript(
+                      "showAlert('Hello Web, This is from mobile 🖐')");
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(20.0),
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.web,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
           ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            _webViewController.runJavascript(
-                "showAlert('Hello Web, This is from mobile 🖐')");
-          },
-          child: const Icon(
-            Icons.web,
-          ),
         ),
       ),
     );
